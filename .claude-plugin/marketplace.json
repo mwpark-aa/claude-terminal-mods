@@ -5,6 +5,11 @@
   },
   "plugins": [
     {
+      "name": "terminal-mods",
+      "source": "./mods/terminal-mods",
+      "description": "status-dash와 row-polish를 한 번에 설치하는 묶음"
+    },
+    {
       "name": "status-dash",
       "source": "./mods/status-dash",
       "description": "입력창 위 대시보드(대화 용량·한도 게이지)와 토스트"

@@ -9,7 +9,13 @@ Claude Code 터미널 화면을 한글로, 더 읽기 좋게 바꿔 주는 모�
 
 ## 설치
 
-Claude Code 터미널 세션에서 입력합니다.
+Claude Code 터미널 세션에서 입력합니다. 두 모드를 한 번에 설치하려면 이 한 줄이면 됩니다.
+
+```
+/plugin install terminal-mods --marketplace mwpark-aa/claude-terminal-mods
+```
+
+하나만 설치하고 싶다면 각각 설치할 수도 있습니다.
 
 ```
 /plugin install status-dash --marketplace mwpark-aa/claude-terminal-mods

@@ -1,0 +1,8 @@
+{
+  "name": "terminal-mods",
+  "version": "0.3.0",
+  "description": "status-dash와 row-polish를 한 번에 설치하는 묶음",
+  "author": { "name": "mwpark-aa" },
+  "license": "MIT",
+  "dependencies": ["status-dash", "row-polish"]
+}
