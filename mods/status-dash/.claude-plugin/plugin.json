@@ -1,0 +1,10 @@
+{
+  "name": "status-dash",
+  "version": "0.2.0",
+  "description": "Band above the prompt with gradient gauges (context, 5-hour and weekly limits) and toasts for finished turns, notifications and a full context.",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "mwpark-aa"
+  },
+  "license": "MIT"
+}

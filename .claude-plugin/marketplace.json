@@ -1,0 +1,19 @@
+{
+  "name": "claude-terminal-mods",
+  "owner": {
+    "name": "mwpark-aa"
+  },
+  "plugins": [
+    {
+      "name": "status-dash",
+      "source": "./mods/status-dash",
+      "description": "입력창 위 대시보드(대화 용량·한도 게이지)와 토스트"
+    },
+    {
+      "name": "row-polish",
+      "source": "./mods/row-polish",
+      "description": "한글 스피너, 도구 줄 재디자인, 답변 속 명령어 강조"
+    }
+  ],
+  "description": "Claude Code 터미널 화면을 한글로, 읽기 좋게 바꿔 주는 모드 모음"
+}
