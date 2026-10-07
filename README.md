@@ -25,13 +25,28 @@ git clone https://github.com/mwpark-aa/claude-terminal-mods
 claude --plugin-dir ./claude-terminal-mods/mods/status-dash --plugin-dir ./claude-terminal-mods/mods/row-polish
 ```
 
+## 켜고 끄기
+
+두 모드 모두 자기 이름의 슬래시 명령으로 켜고 끌 수 있습니다. 끈 상태는 저장돼서 새 세션에서도 유지됩니다.
+
+```
+/status-dash           켜기/끄기를 고르는 작은 창이 열립니다 (숫자 키 1·2 또는 클릭, Esc로 닫기)
+/status-dash on        켜기
+/status-dash off       끄기
+/status-dash status    지금 상태 보기
+
+/row-polish            (위와 같음)
+```
+
+끄면 모드가 그리던 화면이 Claude Code 기본 모양으로 돌아갑니다.
+
 ## 알아두세요
 
 - Claude Code의 모드(함수 훅 플러그인) API는 **초기 단계**입니다. 버전이 올라가면 동작이 바뀌거나 깨질 수 있습니다. 2.1.29x 버전에서 만들고 시험했습니다.
 - 화면 문구는 한글이고, 색은 어두운 터미널을 기준으로 골랐습니다.
 - 5시간·주간 한도 게이지는 구독 계정에서만 나옵니다.
 - 데스크톱 앱의 Code 탭에서는 `/plugin install`을 쓸 수 없습니다. 터미널에서 설치한 뒤에 쓰세요.
-- 두 모드 모두 화면을 그리는 용도이고, 파일을 읽거나 쓰거나 외부로 보내지 않습니다.
+- 두 모드 모두 화면을 그리는 용도입니다. 파일을 읽거나 고치지 않고 외부로 아무것도 보내지 않으며, 켜짐/꺼짐 값 하나만 Claude Code의 저장소에 기록합니다.
 
 ## 개발
 

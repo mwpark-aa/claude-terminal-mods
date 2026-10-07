@@ -14,7 +14,7 @@ test('claude 명령은 인자까지 한 덩어리로 강조한다', () => {
 })
 
 test('명령어가 아닌 단축키, 경로, 식별자는 강조하지 않는다', () => {
-  const others = ['ctrl+b 를 누르세요', '~/.claude/mods/row-polish 폴더', 'hooks/register.tsx 수정', 'tool_use_id 로 찾기', '/Users/bagmin-u/work/ 아래']
+  const others = ['ctrl+b 를 누르세요', '~/.claude/mods/row-polish 폴더', 'hooks/register.tsx 수정', 'tool_use_id 로 찾기', '/Users/user/work/ 아래']
 
   others.forEach(text => expect(emphasizeCommands(text)).toBe(text))
 })

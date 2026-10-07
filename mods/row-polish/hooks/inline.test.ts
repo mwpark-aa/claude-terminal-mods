@@ -7,7 +7,7 @@ test('백틱 안이 명령어 한 개일 때만 명령어로 본다', () => {
   expect(codeKind('claude update')).toBe('command')
   expect(codeKind('claude plugin validate ~/x')).toBe('command')
   expect(codeKind('복사: /compact')).toBe('code')
-  expect(codeKind('/Users/bagmin-u')).toBe('code')
+  expect(codeKind('/Users/user')).toBe('code')
   expect(codeKind('ctrl+b')).toBe('code')
   expect(codeKind('ls -la')).toBe('command')
   expect(codeKind('git status')).toBe('command')

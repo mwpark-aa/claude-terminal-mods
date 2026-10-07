@@ -22,7 +22,7 @@ const resetsIn = (minutes: number) => new Date(NOW_MS + minutes * MINUTE_MS).toI
 
 const snapshotAt = (contextPercent: number, withLimits = true): Snapshot => ({
   model: 'claude-sonnet-5-5',
-  folder: 'sup-airflow',
+  folder: 'my-project',
   contextPercent,
   capturedAt: NOW_MS,
   limits: withLimits
@@ -83,8 +83,8 @@ test('퍼센트는 자릿수가 달라도 같은 폭으로 맞춘다', () => {
 })
 
 test('경로에서 폴더 이름만 뽑는다', () => {
-  expect(folderName('/Users/bagmin-u/work/sup-airflow')).toBe('sup-airflow')
-  expect(folderName('/Users/bagmin-u/work/sup-airflow/')).toBe('sup-airflow')
+  expect(folderName('/Users/user/work/my-project')).toBe('my-project')
+  expect(folderName('/Users/user/work/my-project/')).toBe('my-project')
 })
 
 test('쓴 스킬은 중복 없이 최근 것이 뒤로 간다', () => {
@@ -93,7 +93,7 @@ test('쓴 스킬은 중복 없이 최근 것이 뒤로 간다', () => {
 
 test('첫 줄에 모델과 폴더를, 이어서 대화 용량과 두 한도를 한 줄씩 보여준다', () => {
   expect(bandRows(snapshotAt(75), [], WIDE).map(rowText)).toEqual([
-    'sonnet-5-5 │ 📁 sup-airflow',
+    'sonnet-5-5 │ 📁 my-project',
     '대화 용량 ░░░░░░░░  75% · 곧 /compact 권장',
     '5시간     ░░░░░░░░  24% · 2시간 14분 후 초기화',
     '주간      ░░░░░░░░  61% · 3일 2시간 후 초기화',
@@ -110,13 +110,13 @@ test('세 게이지는 시작 위치가 같다', () => {
 test('쓴 스킬은 최근 두 개만 보여주고 나머지는 개수로 줄인다', () => {
   const [header] = bandRows(snapshotAt(10, false), ['x:one', 'two', 'three'], WIDE).map(rowText)
 
-  expect(header).toBe('sonnet-5-5 │ 📁 sup-airflow │ ✦ two, three +1')
+  expect(header).toBe('sonnet-5-5 │ 📁 my-project │ ✦ two, three +1')
 })
 
 test('스킬 이름에서 앞의 네임스페이스는 뗀다', () => {
   const [header] = bandRows(snapshotAt(10, false), ['superpowers:brainstorming'], WIDE).map(rowText)
 
-  expect(header).toBe('sonnet-5-5 │ 📁 sup-airflow │ ✦ brainstorming')
+  expect(header).toBe('sonnet-5-5 │ 📁 my-project │ ✦ brainstorming')
 })
 
 test('폭이 좁으면 첫 줄에서 뒤쪽 항목부터 뺀다', () => {
@@ -127,7 +127,7 @@ test('폭이 좁으면 첫 줄에서 뒤쪽 항목부터 뺀다', () => {
 
 test('한도 정보가 없으면 대화 용량 줄만 이어진다', () => {
   expect(bandRows(snapshotAt(10, false), [], WIDE).map(rowText)).toEqual([
-    'sonnet-5-5 │ 📁 sup-airflow',
+    'sonnet-5-5 │ 📁 my-project',
     '대화 용량 ░░░░░░░░  10%',
   ])
 })

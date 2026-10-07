@@ -14,7 +14,19 @@ import {
   rememberSkill,
 } from './format'
 import type { BandRow, GaugeSegment } from './format'
+import {
+  CHANGE_TOAST_MS,
+  ENABLED_KEY,
+  changedText,
+  parseSwitchArgs,
+  stateText,
+  switchPaneId,
+  usageText,
+} from './switch'
+import { createSwitchView } from './switchView'
 
+const NAME = 'status-dash'
+const SWITCH_PANE = switchPaneId(NAME)
 const REFRESH_INTERVAL_MS = 5000
 const LONG_TURN_MS = 30000
 const NOTIFICATION_TOAST_MS = 8000
@@ -83,11 +95,56 @@ const refreshSnapshot = async ($: EngineInterface) => {
 const refreshSnapshotQuietly = ($: EngineInterface) =>
   refreshSnapshot($).catch(() => undefined)
 
+const readEnabled = async ($: EngineInterface) => (await $.store.get(ENABLED_KEY)) !== false
+
+const applyEnabled = async ($: EngineInterface, isEnabled: boolean) => {
+  await $.store.set(ENABLED_KEY, isEnabled)
+  $.ui.invalidate('ui.render')
+  $.ui.toast(changedText(NAME, isEnabled), { timeoutMs: CHANGE_TOAST_MS })
+}
+
+const openChoice = async ($: EngineInterface) => {
+  await $.ui.open({ id: SWITCH_PANE, title: NAME, focus: true, closeOnEscape: true, rows: 7 })
+
+  return { text: `${NAME} 켜기/끄기를 선택하세요.` }
+}
+
+const runSwitch = async ($: EngineInterface, args: string): Promise<{ text: string }> => {
+  const action = parseSwitchArgs(args)
+
+  if (action === 'ask') {
+    return openChoice($)
+  }
+
+  if (action === 'status') {
+    return { text: stateText(NAME, await readEnabled($)) }
+  }
+
+  if (action === 'invalid') {
+    return { text: usageText(NAME) }
+  }
+
+  await applyEnabled($, action === 'on')
+
+  return { text: changedText(NAME, action === 'on') }
+}
+
+const refreshWhenEnabled = async ($: EngineInterface) => {
+  if (await readEnabled($)) {
+    await refreshSnapshotQuietly($)
+  }
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     $.ui.status(undefined)
-    await refreshSnapshotQuietly($)
-    $.clock.every(REFRESH_INTERVAL_MS, () => void refreshSnapshotQuietly($))
+    await $.command.register({
+      name: NAME,
+      description: '대시보드와 토스트 켜기/끄기',
+      argumentHint: '[on|off|status]',
+    })
+    await refreshWhenEnabled($)
+    $.clock.every(REFRESH_INTERVAL_MS, () => void refreshWhenEnabled($))
 
     return next(e)
   })
@@ -107,23 +164,41 @@ export const register: Register = on => {
   })
 
   on('turn.complete', async ($, e, next) => {
-    announceTurn($, e)
-    await refreshSnapshotQuietly($)
+    if (await readEnabled($)) {
+      announceTurn($, e)
+      await refreshSnapshotQuietly($)
+    }
 
     return next(e)
   })
 
-  on('classic.Notification', ($, e, next) => {
-    $.ui.toast(`🔔 ${e.message}`, { timeoutMs: NOTIFICATION_TOAST_MS })
+  on('classic.Notification', async ($, e, next) => {
+    if (await readEnabled($)) {
+      $.ui.toast(`🔔 ${e.message}`, { timeoutMs: NOTIFICATION_TOAST_MS })
+    }
 
     return next(e)
+  })
+
+  on('command.run', { command: NAME }, ($, e) => runSwitch($, e.args))
+
+  on('ui.render', { component: 'Pane', requestId: SWITCH_PANE }, async ($, e) => {
+    const isEnabled = await readEnabled($)
+    const { switchView } = createSwitchView($.ui.resolve(e))
+
+    const choose = async (next: boolean) => {
+      await applyEnabled($, next)
+      await $.ui.close({ id: SWITCH_PANE })
+    }
+
+    return switchView(NAME, isEnabled, choose)
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const snapshot = await read($, snapshotAtom)
     const used = await read($, skillsAtom)
 
-    if (e.props.hasSurvey || snapshot === null) {
+    if (!(await readEnabled($)) || e.props.hasSurvey || snapshot === null) {
       return next(e)
     }
 

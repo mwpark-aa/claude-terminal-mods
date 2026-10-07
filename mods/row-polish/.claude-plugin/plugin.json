@@ -1,6 +1,6 @@
 {
   "name": "row-polish",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Korean wording for the spinner, the turn-end line and the background hint, and a readable Bash tool row with status, elapsed time and highlighted command.",
   "types": "./types/index.d.ts",
   "author": {

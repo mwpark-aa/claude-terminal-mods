@@ -8,7 +8,7 @@ const READ_OUTPUT = (numLines: number, startLine: number, totalLines: number) =>
 })
 
 test('홈 폴더는 ~로 줄이고 폴더와 이름을 나눈다', () => {
-  expect(splitFilePath('/Users/bagmin-u/.claude/mods/view.tsx')).toEqual({
+  expect(splitFilePath('/Users/user/.claude/mods/view.tsx')).toEqual({
     directory: '~/.claude/mods/',
     name: 'view.tsx',
   })
@@ -16,7 +16,7 @@ test('홈 폴더는 ~로 줄이고 폴더와 이름을 나눈다', () => {
 })
 
 test('Read는 전체를 읽으면 줄 수만, 일부만 읽으면 범위와 전체 줄 수를 보여준다', () => {
-  const input = { file_path: '/Users/bagmin-u/a.ts' }
+  const input = { file_path: '/Users/user/a.ts' }
 
   expect(describeFileRow('Read', input, READ_OUTPUT(120, 1, 120))?.detail).toBe('120줄')
   expect(describeFileRow('Read', input, READ_OUTPUT(50, 41, 220))?.detail).toBe('41–90줄 / 총 220줄')

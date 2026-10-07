@@ -1,6 +1,14 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock, test as baseTest } from 'claude-code/testing'
 
-type TestOn = Parameters<Parameters<typeof test>[1]>[1]
+type Body = Extract<Parameters<typeof baseTest>[1], (...args: never[]) => unknown>
+type TestOn = Parameters<Body>[1]
+
+const test = (name: string, body: Body) =>
+  baseTest(name, ($, on) => {
+    mock.store(on)
+
+    return body($, on)
+  })
 
 const textElement = (text: string) => ({ type: 'Text', props: {}, children: [text] }) as never
 
@@ -16,7 +24,7 @@ const BASH_ROW = {
   isInterrupted: false,
 }
 
-const mountBashRow = ($: Parameters<Parameters<typeof test>[1]>[0], props: object) =>
+const mountBashRow = ($: Parameters<Body>[0], props: object) =>
   $.ui.mount({
     plugin: 'row-polish',
     surface: 'terminal',
@@ -98,7 +106,7 @@ test('Bash가 끝나면 걸린 시간을 줄에 보여준다', async ($, on) => 
   expect(await ui.find({ text: /2\.3초/ })).toBeDefined()
 })
 
-const mountAssistantMessage = ($: Parameters<Parameters<typeof test>[1]>[0], text: string, props: object = {}) =>
+const mountAssistantMessage = ($: Parameters<Body>[0], text: string, props: object = {}) =>
   $.ui.mount({
     plugin: 'row-polish',
     surface: 'terminal',
@@ -194,7 +202,7 @@ test('요약 블록은 건드리지 않는다', async ($, on) => {
   expect(await ui.find({ text: 'engine row' })).toBeDefined()
 })
 
-const mountToolRow = ($: Parameters<Parameters<typeof test>[1]>[0], tool: string, input: object, extra: object = {}) =>
+const mountToolRow = ($: Parameters<Body>[0], tool: string, input: object, extra: object = {}) =>
   $.ui.mount({
     plugin: 'row-polish',
     surface: 'terminal',
@@ -212,7 +220,7 @@ const mountToolRow = ($: Parameters<Parameters<typeof test>[1]>[0], tool: string
 
 test('Read 줄은 회청색 이름과 흐린 폴더 줄로 그려진다', async ($) => {
   const output = { type: 'text', file: { filePath: '/x', content: '', numLines: 120, startLine: 1, totalLines: 120 } }
-  const ui = await mountToolRow($, 'Read', { file_path: '/Users/bagmin-u/.claude/mods/view.tsx' }, { output })
+  const ui = await mountToolRow($, 'Read', { file_path: '/Users/user/.claude/mods/view.tsx' }, { output })
 
   expect((await ui.find({ type: 'Text', text: 'Read' }))?.props.color).toBe('#94a3b8')
   expect(await ui.find({ type: 'Text', text: /view\.tsx/ })).toBeDefined()
@@ -267,4 +275,151 @@ test('파일 경로가 없는 Read는 엔진이 그리게 둔다', async ($, on)
   const ui = await mountToolRow($, 'Read', {})
 
   expect(await ui.find({ text: 'engine row' })).toBeDefined()
+})
+
+
+const SWITCH_PANE_PROPS = {
+  title: 'row-polish',
+  isFocused: false,
+  bodyColumns: 60,
+  placement: 'inline',
+  scroll: { bodyRows: 7, offset: 0, total: 3 },
+  view: {},
+} as never
+
+const answerCommandWorld = (on: TestOn) => {
+  on('command.register', () => ({ value: undefined }))
+  on('ui.invalidate', () => ({ value: undefined }))
+  const toasts: string[] = []
+  on('ui.toast', (_$, e) => {
+    toasts.push(e.text)
+    return { value: undefined }
+  })
+  return toasts
+}
+
+baseTest('꺼 두면 스피너 문구를 엔진 그대로 둔다', async ($, on) => {
+  mock.store(on, { enabled: false })
+  drawEnginesOwnProps(on, props => String(props.word))
+
+  const ui = await $.ui.mount({
+    plugin: 'row-polish',
+    surface: 'terminal',
+    component: 'Spinner',
+    props: { word: 'Sauteing', message: null, suffix: '…', mode: 'thinking' },
+  })
+
+  expect(await ui.find({ text: 'Sauteing' })).toBeDefined()
+})
+
+baseTest('꺼 두면 턴 종료 줄을 엔진이 그리게 둔다', async ($, on) => {
+  mock.store(on, { enabled: false })
+  drawEnginesOwnProps(on, () => 'engine row')
+
+  const ui = await $.ui.mount({
+    plugin: 'row-polish',
+    surface: 'terminal',
+    component: 'TurnDuration',
+    props: { word: 'Baked', durationMs: 64000 },
+  })
+
+  expect(await ui.find({ text: 'engine row' })).toBeDefined()
+})
+
+baseTest('꺼 두면 답변 속 명령어를 직접 그리지 않는다', async ($, on) => {
+  mock.store(on, { enabled: false })
+  drawEnginesOwnProps(on, () => 'engine row')
+
+  const ui = await mountAssistantMessage($, '/compact 를 하세요')
+
+  expect(await ui.find({ text: 'engine row' })).toBeDefined()
+})
+
+baseTest('꺼 두면 Bash 줄과 파일 줄도 엔진이 그리게 둔다', async ($, on) => {
+  mock.store(on, { enabled: false })
+  drawEnginesOwnProps(on, () => 'engine row')
+
+  const bash = await mountToolRow($, 'Bash', { command: 'ls -la' })
+
+  expect(await bash.find({ text: 'engine row' })).toBeDefined()
+})
+
+test('/row-polish off 로 끄고 on 으로 다시 켠다', async ($, on) => {
+  const toasts = answerCommandWorld(on)
+  drawEnginesOwnProps(on, props => String(props.word))
+
+  const off = await $.command.run({ command: 'row-polish', args: 'off' } as never)
+  const ui = await $.ui.mount({
+    plugin: 'row-polish',
+    surface: 'terminal',
+    component: 'Spinner',
+    props: { word: 'Sauteing', message: null, suffix: '…', mode: 'thinking' },
+  })
+
+  expect(off).toMatchObject({ text: 'row-polish 을(를) 껐어요.' })
+  expect(toasts).toEqual(['row-polish 을(를) 껐어요.'])
+  expect(await ui.find({ text: 'Sauteing' })).toBeDefined()
+})
+
+test('/row-polish on 은 다시 켜서 한글 스피너가 돌아온다', async ($, on) => {
+  answerCommandWorld(on)
+  drawEnginesOwnProps(on, props => String(props.word))
+  await $.command.run({ command: 'row-polish', args: 'off' } as never)
+
+  const turnedOn = await $.command.run({ command: 'row-polish', args: 'on' } as never)
+  const ui = await $.ui.mount({
+    plugin: 'row-polish',
+    surface: 'terminal',
+    component: 'Spinner',
+    props: { word: 'Sauteing', message: null, suffix: '…', mode: 'thinking' },
+  })
+
+  expect(turnedOn).toMatchObject({ text: 'row-polish 을(를) 켰어요.' })
+  expect(await ui.find({ text: '생각 중' })).toBeDefined()
+})
+
+test('/row-polish status 와 잘못된 인자를 안내한다', async ($, on) => {
+  answerCommandWorld(on)
+
+  const status = await $.command.run({ command: 'row-polish', args: 'status' } as never)
+  const invalid = await $.command.run({ command: 'row-polish', args: 'maybe' } as never)
+
+  expect(status).toMatchObject({ text: 'row-polish 은(는) 지금 켜져 있어요.' })
+  expect(invalid).toMatchObject({ text: expect.stringContaining('/row-polish [on|off|status]') })
+})
+
+test('인자 없이 입력하면 켜기/끄기를 고르는 창을 연다', async ($, on) => {
+  answerCommandWorld(on)
+  const opened: unknown[] = []
+  on('ui.open', (_$, e) => {
+    opened.push(e)
+    return { value: { isPlaced: true } }
+  })
+
+  await $.command.run({ command: 'row-polish', args: '' } as never)
+
+  expect(opened[0]).toMatchObject({ id: 'row-polish-switch', focus: true, closeOnEscape: true })
+})
+
+test('고르는 창은 두 선택지를 보여주고 끄기를 누르면 꺼지고 닫힌다', async ($, on) => {
+  const toasts = answerCommandWorld(on)
+  const closed: unknown[] = []
+  on('ui.close', (_$, e) => {
+    closed.push(e)
+    return { value: undefined }
+  })
+  const ui = await $.ui.mount({
+    plugin: 'row-polish',
+    surface: 'terminal',
+    component: 'Pane',
+    requestId: 'row-polish-switch',
+    props: SWITCH_PANE_PROPS,
+  })
+
+  expect((await ui.findAll({ type: 'Button' })).map(button => button.props.label)).toEqual(['켜기', '끄기'])
+
+  await $.ui.press({ plugin: 'row-polish', key: 'off' })
+
+  expect(toasts).toEqual(['row-polish 을(를) 껐어요.'])
+  expect(closed).toHaveLength(1)
 })

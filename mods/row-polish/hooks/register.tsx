@@ -14,23 +14,102 @@ import {
 import { ACTION_COLORS } from './palette'
 import { planMessage } from './plan'
 import { createFileRowView } from './rows'
+import {
+  CHANGE_TOAST_MS,
+  ENABLED_KEY,
+  changedText,
+  parseSwitchArgs,
+  stateText,
+  switchPaneId,
+  usageText,
+} from './switch'
+import { createSwitchView } from './switchView'
 import { createMessageView } from './view'
 
+const NAME = 'row-polish'
+const SWITCH_PANE = switchPaneId(NAME)
+
 const durationsAtom = atom({ plugin: 'row-polish', key: 'durations' } as const, {})
+
+const readEnabled = async ($: EngineInterface) => (await $.store.get(ENABLED_KEY)) !== false
+
+const applyEnabled = async ($: EngineInterface, isEnabled: boolean) => {
+  await $.store.set(ENABLED_KEY, isEnabled)
+  $.ui.invalidate('ui.render')
+  $.ui.toast(changedText(NAME, isEnabled), { timeoutMs: CHANGE_TOAST_MS })
+}
+
+const openChoice = async ($: EngineInterface) => {
+  await $.ui.open({ id: SWITCH_PANE, title: NAME, focus: true, closeOnEscape: true, rows: 7 })
+
+  return { text: `${NAME} 켜기/끄기를 선택하세요.` }
+}
+
+const runSwitch = async ($: EngineInterface, args: string): Promise<{ text: string }> => {
+  const action = parseSwitchArgs(args)
+
+  if (action === 'ask') {
+    return openChoice($)
+  }
+
+  if (action === 'status') {
+    return { text: stateText(NAME, await readEnabled($)) }
+  }
+
+  if (action === 'invalid') {
+    return { text: usageText(NAME) }
+  }
+
+  await applyEnabled($, action === 'on')
+
+  return { text: changedText(NAME, action === 'on') }
+}
 
 const recordDuration = ($: EngineInterface, id: string, ms: number) =>
   update($, durationsAtom, durations => withDuration(durations, id, ms))
 
 export const register: Register = on => {
-  on('ui.render', { component: 'Spinner' }, ($, e, next) =>
-    next({ ...e, props: { ...e.props, word: spinnerWord(e.props.mode) } }),
+  on('session.start', async ($, e, next) => {
+    await $.command.register({
+      name: NAME,
+      description: '한글 스피너, 도구 줄, 명령어 강조 켜기/끄기',
+      argumentHint: '[on|off|status]',
+    })
+
+    return next(e)
+  })
+
+  on('command.run', { command: NAME }, ($, e) => runSwitch($, e.args))
+
+  on('ui.render', { component: 'Pane', requestId: SWITCH_PANE }, async ($, e) => {
+    const isEnabled = await readEnabled($)
+    const { switchView } = createSwitchView($.ui.resolve(e))
+
+    const choose = async (next: boolean) => {
+      await applyEnabled($, next)
+      await $.ui.close({ id: SWITCH_PANE })
+    }
+
+    return switchView(NAME, isEnabled, choose)
+  })
+
+  on('ui.render', { component: 'Spinner' }, async ($, e, next) =>
+    (await readEnabled($))
+      ? next({ ...e, props: { ...e.props, word: spinnerWord(e.props.mode) } })
+      : next(e),
   )
 
-  on('ui.render', { component: 'ToolProgress' }, ($, e, next) =>
-    next({ ...e, props: { ...e.props, hint: localizeBackgroundHint(e.props.hint) } }),
+  on('ui.render', { component: 'ToolProgress' }, async ($, e, next) =>
+    (await readEnabled($))
+      ? next({ ...e, props: { ...e.props, hint: localizeBackgroundHint(e.props.hint) } })
+      : next(e),
   )
 
-  on('ui.render', { component: 'TurnDuration' }, ($, e) => {
+  on('ui.render', { component: 'TurnDuration' }, async ($, e, next) => {
+    if (!(await readEnabled($))) {
+      return next(e)
+    }
+
     const { Box, Text } = $.ui.resolve(e)
 
     return (
@@ -41,10 +120,10 @@ export const register: Register = on => {
     )
   })
 
-  on('ui.render', { component: 'AssistantMessage' }, ($, e, next) => {
+  on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
     const plan = planMessage(e.props.text)
 
-    if (e.props.isSummary || plan.mode === 'engine') {
+    if (e.props.isSummary || plan.mode === 'engine' || !(await readEnabled($))) {
       return next(e)
     }
 
@@ -67,7 +146,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'ToolUse', props: { tool: 'Bash' } }, async ($, e, next) => {
     const bash = readBashInput(e.props.input)
 
-    if (bash === undefined) {
+    if (bash === undefined || !(await readEnabled($))) {
       return next(e)
     }
 
@@ -97,7 +176,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'ToolUse', props: { tool: ['Read', 'Edit', 'Write'] } }, async ($, e, next) => {
     const row = describeFileRow(e.props.tool, e.props.input, e.props.output)
 
-    if (row === undefined) {
+    if (row === undefined || !(await readEnabled($))) {
       return next(e)
     }
 
